@@ -8,34 +8,104 @@ interface DeployExportModalProps {
 }
 
 export const DeployExportModal: React.FC<DeployExportModalProps> = ({ isOpen, onClose }) => {
-  const [activeTab, setActiveTab] = useState<'index_html' | 'worker_js' | 'wrangler_toml' | 'readme'>('index_html');
+  const [activeTab, setActiveTab] = useState<'github_workflow' | 'index_html' | 'standalone_html' | 'worker_js' | 'wrangler_toml' | 'readme'>('github_workflow');
   const [copied, setCopied] = useState(false);
 
   if (!isOpen) return null;
 
-  const standaloneIndexHtml = `<!DOCTYPE html>
+  const githubWorkflowContent = `name: Deploy Aria Demo to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build website with injected GitHub Secrets
+        env:
+          # =========================================================================
+          # GITHUB SECRET PLACEHOLDER:
+          # 1. In GitHub, go to: Settings -> Secrets and variables -> Actions
+          # 2. Click "New repository secret"
+          # 3. Name: GROQ_API_KEY
+          # 4. Value: your Groq API key (starts with 'gsk_...')
+          # =========================================================================
+          VITE_GROQ_API_KEY: \${{ secrets.GROQ_API_KEY }}
+          VITE_WORKER_URL: \${{ secrets.WORKER_URL }}
+        run: npm run build
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist'
+
+  deploy:
+    environment:
+      name: github-pages
+      url: \${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+`;
+
+  const indexHtmlContent = `<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Aria — Dazzle Dental International Concierge</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg:#0b0d10; --bg-2:#12151a; --surface:#161a20; --text:#f3efe7;
-    --text-muted:#9aa0aa; --gold:#c9a84c; --gold-soft:#e3cd8d; --border:#242932;
-  }
-  * { box-sizing: border-box; margin:0; padding:0; }
-  body { background: var(--bg); color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; line-height: 1.6; }
-  h1,h2,h3 { font-family: 'Fraunces', serif; }
-  /* Full styles in production artifact */
-</style>
-</head>
-<body>
-<!-- Production single-file artifact configured with 3D canvas and Aria concierge -->
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aria — International Patient Concierge</title>
+    <!-- 
+      GITHUB SECRETS PLACEHOLDER:
+      Set GROQ_API_KEY in GitHub Repository Settings -> Secrets and variables -> Actions.
+      The GitHub Actions workflow will automatically inject VITE_GROQ_API_KEY into the build.
+    -->
+    <script>
+      window.__GROQ_API_KEY__ = window.__GROQ_API_KEY__ || "";
+      window.__WORKER_URL__ = window.__WORKER_URL__ || "";
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>`;
+
+  const standaloneIndexHtml = `<!-- Standalone zero-build single-file HTML -->
+<!-- Full file is available at /standalone.html in the repo -->
+<script>
+  // =========================================================================
+  // GROQ API KEY PLACEHOLDER
+  // =========================================================================
+  const GROQ_API_KEY = "YOUR_GROQ_API_KEY_HERE";
+  const DEMO_MODE = true;
+</script>`;
 
   const workerJsContent = `// Cloudflare Worker Proxy (worker.js)
 // Holds GROQ_API_KEY as an encrypted Cloudflare secret
@@ -119,10 +189,13 @@ compatibility_date = "2024-03-01"
 
   const getActiveContent = () => {
     switch (activeTab) {
+      case 'github_workflow': return githubWorkflowContent;
+      case 'index_html': return indexHtmlContent;
+      case 'standalone_html': return standaloneIndexHtml;
       case 'worker_js': return workerJsContent;
       case 'wrangler_toml': return wranglerTomlContent;
       case 'readme': return readmeContent;
-      default: return standaloneIndexHtml;
+      default: return githubWorkflowContent;
     }
   };
 
@@ -134,7 +207,9 @@ compatibility_date = "2024-03-01"
 
   const handleDownload = () => {
     const filenameMap: Record<string, string> = {
+      github_workflow: 'deploy.yml',
       index_html: 'index.html',
+      standalone_html: 'standalone.html',
       worker_js: 'worker.js',
       wrangler_toml: 'wrangler.toml',
       readme: 'README.md'
@@ -143,7 +218,7 @@ compatibility_date = "2024-03-01"
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = filenameMap[activeTab];
+    link.download = filenameMap[activeTab] || 'export.txt';
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -159,7 +234,7 @@ compatibility_date = "2024-03-01"
             </div>
             <div>
               <h3 className="text-base font-bold text-[#f3efe7]">Deploy Artifacts & Repository Files</h3>
-              <p className="text-xs text-[#9aa0aa]">Standalone single-file & Cloudflare Worker ready for production</p>
+              <p className="text-xs text-[#9aa0aa]">GitHub Actions workflow, index.html, & Cloudflare Worker ready for production</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 text-[#9aa0aa] hover:text-[#f3efe7] rounded-lg">
@@ -168,32 +243,54 @@ compatibility_date = "2024-03-01"
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex bg-[#0e1115] border-b border-[#242932] px-6">
+        <div className="flex bg-[#0e1115] border-b border-[#242932] px-6 overflow-x-auto">
+          <button
+            onClick={() => setActiveTab('github_workflow')}
+            className={`px-3 py-2.5 text-xs font-semibold border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+              activeTab === 'github_workflow'
+                ? 'border-[#c9a84c] text-[#f3e2a9]'
+                : 'border-transparent text-[#9aa0aa] hover:text-[#f3efe7]'
+            }`}
+          >
+            <Code2 className="w-3.5 h-3.5 text-[#c9a84c]" />
+            <span>deploy.yml (GitHub Secrets)</span>
+          </button>
           <button
             onClick={() => setActiveTab('index_html')}
-            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${
+            className={`px-3 py-2.5 text-xs font-semibold border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'index_html'
                 ? 'border-[#c9a84c] text-[#f3e2a9]'
                 : 'border-transparent text-[#9aa0aa] hover:text-[#f3efe7]'
             }`}
           >
             <Globe className="w-3.5 h-3.5" />
-            <span>index.html (GitHub Pages)</span>
+            <span>index.html</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('standalone_html')}
+            className={`px-3 py-2.5 text-xs font-semibold border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+              activeTab === 'standalone_html'
+                ? 'border-[#c9a84c] text-[#f3e2a9]'
+                : 'border-transparent text-[#9aa0aa] hover:text-[#f3efe7]'
+            }`}
+          >
+            <Globe className="w-3.5 h-3.5" />
+            <span>standalone.html</span>
           </button>
           <button
             onClick={() => setActiveTab('worker_js')}
-            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${
+            className={`px-3 py-2.5 text-xs font-semibold border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'worker_js'
                 ? 'border-[#c9a84c] text-[#f3e2a9]'
                 : 'border-transparent text-[#9aa0aa] hover:text-[#f3efe7]'
             }`}
           >
             <Code2 className="w-3.5 h-3.5" />
-            <span>worker.js (Cloudflare)</span>
+            <span>worker.js</span>
           </button>
           <button
             onClick={() => setActiveTab('wrangler_toml')}
-            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${
+            className={`px-3 py-2.5 text-xs font-semibold border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'wrangler_toml'
                 ? 'border-[#c9a84c] text-[#f3e2a9]'
                 : 'border-transparent text-[#9aa0aa] hover:text-[#f3efe7]'
@@ -204,7 +301,7 @@ compatibility_date = "2024-03-01"
           </button>
           <button
             onClick={() => setActiveTab('readme')}
-            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${
+            className={`px-3 py-2.5 text-xs font-semibold border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'readme'
                 ? 'border-[#c9a84c] text-[#f3e2a9]'
                 : 'border-transparent text-[#9aa0aa] hover:text-[#f3efe7]'

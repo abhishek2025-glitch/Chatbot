@@ -12,6 +12,26 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..800;1,9..144,300..800&family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+    <!-- 
+      ================================================================================
+      GITHUB SECRETS & GROQ API CONFIGURATION PLACEHOLDER:
+      ================================================================================
+      Method A (Recommended - Automated GitHub Pages Build):
+        1. In your GitHub repository, go to: Settings -> Secrets and variables -> Actions
+        2. Click "New repository secret"
+        3. Name: GROQ_API_KEY
+        4. Value: your Groq API key (starts with 'gsk_...')
+        The .github/workflows/deploy.yml workflow will automatically inject this secret
+        into the Vite build (VITE_GROQ_API_KEY).
+
+      Method B (Direct Static HTML / CDN Deployment without GitHub Actions):
+        If deploying this index.html as a static asset without running 'npm run build',
+        paste your Groq key into window.__GROQ_API_KEY__ below:
+    -->
+    <script>
+      window.__GROQ_API_KEY__ = window.__GROQ_API_KEY__ || "";
+      window.__WORKER_URL__ = window.__WORKER_URL__ || "";
+    </script>
   </head>
   <body>
     <div id="root"></div>

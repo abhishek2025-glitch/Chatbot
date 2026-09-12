@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aria — Dazzle Dental 24/7 International Patient Concierge</title>
+  <meta name="description" content="AI patient concierge built for Dazzle Dental with live 3D showcase, Groq inference, and CRM lead capture." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    :root {
+      --bg: #0b0d10;
+      --bg-2: #12151a;
+      --surface: #161a20;
+      --text: #f3efe7;
+      --text-muted: #9aa0aa;
+      --gold: #c9a84c;
+      --gold-light: #f3e2a9;
+      --border: #242932;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    h1, h2, h3, .font-serif { font-family: 'Fraunces', serif; }
+    header {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 40;
+      background: rgba(11, 13, 16, 0.9); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border); padding: 14px 24px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--gold-light), var(--gold));
+      color: #0b0d10; font-weight: 800; display: flex; align-items: center; justify-content: center;
+      font-family: 'Fraunces', serif;
+    }
+    .hero {
+      position: relative; min-height: 90vh; display: flex; align-items: center;
+      padding: 120px 24px 80px; max-width: 1200px; margin: 0 auto;
+    }
+    #three-canvas-container {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; opacity: 0.65;
+      pointer-events: none;
+    }
+    .hero-content { position: relative; z-index: 10; max-width: 680px; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(201, 168, 76, 0.12); color: var(--gold-light);
+      border: 1px solid rgba(201, 168, 76, 0.3); border-radius: 9999px;
+      padding: 6px 14px; font-size: 12px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.05em; margin-bottom: 20px;
+    }
+    .hero h1 { font-size: clamp(34px, 5vw, 56px); line-height: 1.15; font-weight: 700; margin-bottom: 20px; }
+    .hero h1 em { color: var(--gold-light); font-style: italic; }
+    .hero p { color: var(--text-muted); font-size: 17px; margin-bottom: 32px; line-height: 1.7; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 24px; border-radius: 10px; font-weight: 700; font-size: 14px;
+      text-decoration: none; cursor: pointer; transition: all 0.2s; border: none;
+    }
+    .btn-gold {
+      background: linear-gradient(135deg, var(--gold-light), var(--gold));
+      color: #0b0d10; box-shadow: 0 4px 20px rgba(201, 168, 76, 0.25);
+    }
+    .btn-gold:hover { transform: translateY(-2px); filter: brightness(1.08); }
+    
+    /* Floating Chat Concierge Widget */
+    .chat-widget-launcher {
+      position: fixed; bottom: 24px; right: 24px; z-index: 100;
+      background: linear-gradient(135deg, var(--gold-light), var(--gold));
+      color: #0b0d10; border: none; border-radius: 50px; padding: 14px 22px;
+      font-weight: 700; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 10px;
+      box-shadow: 0 8px 30px rgba(201, 168, 76, 0.35); transition: transform 0.2s;
+    }
+    .chat-widget-launcher:hover { transform: scale(1.05); }
+    .chat-modal {
+      display: none; position: fixed; bottom: 24px; right: 24px; z-index: 110;
+      width: calc(100vw - 48px); max-width: 440px; height: 600px;
+      background: var(--bg-2); border: 1px solid var(--border); border-radius: 18px;
+      box-shadow: 0 16px 50px rgba(0,0,0,0.8); flex-direction: column; overflow: hidden;
+    }
+    .chat-header {
+      background: var(--surface); padding: 16px; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .chat-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .msg {
+      max-width: 85%; padding: 12px 16px; border-radius: 14px; font-size: 13.5px; line-height: 1.5;
+    }
+    .msg-bot {
+      background: var(--surface); border: 1px solid var(--border);
+      align-self: flex-start; border-bottom-left-radius: 4px;
+    }
+    .msg-user {
+      background: #252d3a; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px;
+    }
+    .chat-input-area {
+      padding: 12px; background: var(--surface); border-top: 1px solid var(--border);
+      display: flex; gap: 8px;
+    }
+    .chat-input-area input {
+      flex: 1; background: var(--bg); border: 1px solid var(--border);
+      padding: 10px 14px; border-radius: 10px; color: #fff; font-size: 13px; outline: none;
+    }
+    .chat-input-area input:focus { border-color: var(--gold); }
+    .pill-quick {
+      display: flex; gap: 6px; padding: 8px 16px; overflow-x: auto; background: rgba(0,0,0,0.2);
+    }
+    .quick-chip {
+      background: var(--surface); border: 1px solid var(--border); color: var(--gold-light);
+      padding: 4px 10px; border-radius: 20px; font-size: 11px; cursor: pointer; white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">D</div>
+      <div>
+        <strong>Dazzle Dental</strong>
+        <div style="font-size: 11px; color: var(--text-muted);">Aria 24/7 International Concierge</div>
+      </div>
+    </div>
+    <div>
+      <button onclick="toggleChat()" class="btn btn-gold" style="padding: 8px 16px; font-size: 12px;">
+        Open Aria Chat
+      </button>
+    </div>
+  </header>
+
+  <!-- Hero with 3D Canvas -->
+  <section class="hero">
+    <div id="three-canvas-container"></div>
+    <div class="hero-content">
+      <div class="pill">
+        <span style="width: 8px; height: 8px; background: var(--gold); border-radius: 50%; display: inline-block;"></span>
+        Proof of Work Sales Demo · Built for Dazzle Dental
+      </div>
+      <h1>Your international patients ask questions at <em>3:00 AM.</em> Now someone answers.</h1>
+      <p>
+        Meet <strong>Aria</strong> — an embeddable AI concierge operating on Groq inference. She quotes procedure price bands, guides flight and hotel arrangements in 5 languages, and passes warm high-ticket cosmetic cases to WhatsApp.
+      </p>
+      <div>
+        <button onclick="toggleChat()" class="btn btn-gold">
+          Launch Aria Concierge
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Chat Launcher -->
+  <button id="chat-launcher" onclick="toggleChat()" class="chat-widget-launcher">
+    <span>💬</span> Talk to Aria (24/7 Concierge)
+  </button>
+
+  <!-- Floating Chat Modal -->
+  <div id="chat-modal" class="chat-modal">
+    <div class="chat-header">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div class="brand-icon" style="width: 32px; height: 32px; font-size: 14px;">A</div>
+        <div>
+          <div style="font-weight: bold; font-size: 14px;">Aria · Dazzle Dental</div>
+          <div style="font-size: 10px; color: #34d399;">● Online 24/7 (Groq LPU)</div>
+        </div>
+      </div>
+      <button onclick="toggleChat()" style="background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer;">✕</button>
+    </div>
+
+    <!-- Suggested Question Pills -->
+    <div class="pill-quick">
+      <div class="quick-chip" onclick="sendQuick('How much are veneers for 8-10 teeth?')">Veneer cost?</div>
+      <div class="quick-chip" onclick="sendQuick('Do you provide airport pickup and hotel?')">Travel & Hotel?</div>
+      <div class="quick-chip" onclick="sendQuick('I want to book an appointment with a dentist')">Book consult</div>
+      <div class="quick-chip" onclick="sendQuick('كم تكلفة الفينير وزراعة الأسنان؟')">العربية (Arabic)</div>
+    </div>
+
+    <div id="chat-body" class="chat-body">
+      <div class="msg msg-bot">
+        Hello! I'm <strong>Aria</strong>, Dazzle Dental's AI concierge (an automated assistant, not a doctor). I can guide you through procedure timelines, typical price bands, and international travel arrangements.<br><br>
+        What treatment are you exploring today, and which country would you be traveling from?
+      </div>
+    </div>
+
+    <div class="chat-input-area">
+      <input type="text" id="chat-input" placeholder="Type your message..." onkeydown="if(event.key==='Enter') sendMessage()" />
+      <button onclick="sendMessage()" class="btn btn-gold" style="padding: 8px 16px;">Send</button>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // GITHUB SECRETS & GROQ API KEY CONFIGURATION
+    // =========================================================================
+    // If deploying this standalone file directly to GitHub Pages or any host:
+    // Replace "YOUR_GROQ_API_KEY_HERE" with your Groq API key (starts with 'gsk_...').
+    // If left as is, Aria automatically runs in Safe Demo Mode with built-in responses!
+    const GROQ_API_KEY = "YOUR_GROQ_API_KEY_HERE";
+    const DEMO_MODE = true;
+
+    // Three.js 3D Geometric Gold Mesh Canvas
+    function initThree() {
+      const container = document.getElementById('three-canvas-container');
+      if (!container) return;
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+      camera.position.z = 7;
+
+      const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      container.appendChild(renderer.domElement);
+
+      const group = new THREE.Group();
+      scene.add(group);
+
+      const geom = new THREE.IcosahedronGeometry(2.2, 1);
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0xc9a84c,
+        wireframe: true,
+        roughness: 0.3,
+        metalness: 0.8
+      });
+      const mesh = new THREE.Mesh(geom, mat);
+      group.add(mesh);
+
+      const light = new THREE.DirectionalLight(0xfff0c2, 2.5);
+      light.position.set(5, 5, 5);
+      scene.add(light);
+      scene.add(new THREE.AmbientLight(0x222222));
+
+      function animate() {
+        requestAnimationFrame(animate);
+        group.rotation.x += 0.002;
+        group.rotation.y += 0.003;
+        renderer.render(scene, camera);
+      }
+      animate();
+
+      window.addEventListener('resize', () => {
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+      });
+    }
+    initThree();
+
+    // Chat widget state and interaction
+    let chatOpen = false;
+    function toggleChat() {
+      chatOpen = !chatOpen;
+      document.getElementById('chat-modal').style.display = chatOpen ? 'flex' : 'none';
+      document.getElementById('chat-launcher').style.display = chatOpen ? 'none' : 'flex';
+      if (chatOpen) document.getElementById('chat-input').focus();
+    }
+
+    function appendMessage(text, isUser) {
+      const body = document.getElementById('chat-body');
+      const div = document.createElement('div');
+      div.className = 'msg ' + (isUser ? 'msg-user' : 'msg-bot');
+      div.innerHTML = text.replace(/\\n/g, '<br>');
+      body.appendChild(div);
+      body.scrollTop = body.scrollHeight;
+    }
+
+    function sendQuick(txt) {
+      document.getElementById('chat-input').value = txt;
+      sendMessage();
+    }
+
+    const conversation = [
+      { role: "system", content: "You are Aria, 24/7 AI Concierge for Dazzle Dental. Smile makeover (8-10 veneers) is $4,500-$9,000. Single implant $900-$1,600. Never diagnose symptoms or give single binding prices. If pain or emergency, route to WhatsApp +971 50 123 4567 immediately. Mirror language." }
+    ];
+
+    async function sendMessage() {
+      const input = document.getElementById('chat-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      appendMessage(text, true);
+      input.value = '';
+      conversation.push({ role: "user", content: text });
+
+      // Check if user has provided a real key
+      const activeKey = GROQ_API_KEY && GROQ_API_KEY !== "YOUR_GROQ_API_KEY_HERE" ? GROQ_API_KEY : "";
+
+      if (activeKey) {
+        try {
+          const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer " + activeKey
+            },
+            body: JSON.stringify({
+              model: "openai/gpt-oss-120b",
+              messages: conversation,
+              temperature: 0.4,
+              max_completion_tokens: 500
+            })
+          });
+          const data = await res.json();
+          const reply = data.choices?.[0]?.message?.content || "Thank you for reaching out to Dazzle Dental.";
+          conversation.push({ role: "assistant", content: reply });
+          appendMessage(reply, false);
+          return;
+        } catch (e) {
+          console.warn("Groq request failed, using safe fallback:", e);
+        }
+      }
+
+      // Safe Built-in Fallback Logic (Zero-Setup Demo)
+      setTimeout(() => {
+        let reply = "";
+        const lower = text.toLowerCase();
+        if (lower.includes("pain") || lower.includes("hurt") || lower.includes("swelling") || lower.includes("emergency")) {
+          reply = "🚨 <strong>Important Notice:</strong> I am an AI assistant and cannot provide clinical diagnosis. Because you mentioned active pain, our clinical team should evaluate you directly. Please contact our emergency line on WhatsApp at +971 50 123 4567 immediately.";
+        } else if (lower.includes("veneer") || lower.includes("cost") || lower.includes("price") || lower.includes("how much")) {
+          reply = "For a full smile makeover with 8–10 handcrafted porcelain veneers, international patient price ranges typically span from <strong>$4,500 to $9,000 USD</strong>. Exact pricing depends on prep requirements and bite alignment, confirmed via clinical 3D scan on day 1. What country would you be traveling from?";
+        } else if (lower.includes("hotel") || lower.includes("airport") || lower.includes("travel")) {
+          reply = "We offer a dedicated VIP International Patient Package that includes complimentary airport pickup, discounted rates with partner luxury hotels within 10 minutes of the clinic, and dedicated multilingual patient coordinators. Trips are typically 5–7 days.";
+        } else if (lower.includes("book") || lower.includes("appointment") || lower.includes("doctor")) {
+          reply = "I would be happy to connect you with our lead Patient Coordinator! You can chat directly via <a href='https://wa.me/971501234567' target='_blank' style='color:#f3e2a9;font-weight:bold;text-decoration:underline;'>WhatsApp (+971 50 123 4567)</a> or schedule a virtual video consult to review your photos.";
+        } else {
+          reply = "Thank you for your inquiry! At Dazzle Dental, we specialize in high-ticket cosmetic smile makeovers, dental implants, and full-mouth rehabilitation. Are you looking for cosmetic veneers, single/multiple implants, or general restoration?";
+        }
+        conversation.push({ role: "assistant", content: reply });
+        appendMessage(reply, false);
+      }, 500);
+    }
+  </script>
+</body>
+</html>

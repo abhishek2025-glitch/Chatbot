@@ -33,14 +33,22 @@ export async function generateChatReply(
     }))
   ];
 
-  // 1. If Groq API Key is provided, call Groq API live
-  if (groqKey && groqKey.trim().length > 5) {
+  // Resolve effective Groq API Key:
+  // Priority: 1. In-memory demo input -> 2. GitHub Secrets (VITE_GROQ_API_KEY) -> 3. Window placeholder
+  const envKey = ((import.meta as any).env?.VITE_GROQ_API_KEY as string) || '';
+  const windowKey = (typeof window !== 'undefined' && (window as any).__GROQ_API_KEY__) || '';
+  const effectiveKey = (groqKey && groqKey.trim().length > 5) 
+    ? groqKey.trim() 
+    : (envKey.trim() || windowKey.trim() || '');
+
+  // 1. If Groq API Key is available, call Groq API live
+  if (effectiveKey && effectiveKey.length > 5) {
     try {
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${groqKey.trim()}`
+          'Authorization': `Bearer ${effectiveKey}`
         },
         body: JSON.stringify({
           model: groqModel || 'openai/gpt-oss-120b',

@@ -38,14 +38,38 @@ Aria is a branded, embeddable AI concierge designed specifically for **Dazzle De
 
 ---
 
-## 3. How to Deploy
+## 3. How to Deploy to GitHub Pages with GitHub Secrets
 
-### Option A: Deploy to GitHub Pages
-1. Push `index.html` to your GitHub repository `main` branch.
-2. In GitHub, navigate to **Settings** → **Pages** → **Source: Deploy from a branch** (`main` / root).
-3. Your live personalized demo is accessible immediately.
+### Step 1: Add Your Groq API Key to GitHub Secrets
+1. In your GitHub repository, click **Settings** (top tab).
+2. On the left sidebar, click **Secrets and variables** → **Actions**.
+3. Under *Repository secrets*, click **New repository secret**.
+4. Set **Name**: `GROQ_API_KEY`
+5. Set **Secret**: Paste your Groq API key (starts with `gsk_...` from [console.groq.com](https://console.groq.com/keys)).
+6. Click **Add secret**.
+*(Optional: you can also add `WORKER_URL` as a secret if routing through Cloudflare).*
 
-### Option B: Cloudflare Worker Production Proxy
+### Step 2: Enable GitHub Pages with GitHub Actions
+1. In your GitHub repository, go to **Settings** → **Pages** (under "Code and automation").
+2. Under **Build and deployment** → **Source**, select **GitHub Actions**.
+3. Push any commit to `main`, or go to **Actions** → **Deploy Aria Demo to GitHub Pages** → **Run workflow**.
+4. GitHub Actions will automatically:
+   - Check out your repository
+   - Inject your `GROQ_API_KEY` secret securely into the Vite build (`VITE_GROQ_API_KEY`)
+   - Compile and deploy your site to `https://<your-username>.github.io/<repo-name>/`
+
+### Step 3: Zero-Build Static Deployment (Alternative)
+If you prefer deploying without running `npm run build`:
+- You can serve `standalone.html` directly as `index.html`.
+- It includes a placeholder at the top of the script:
+  ```javascript
+  const GROQ_API_KEY = "PASTE_YOUR_GROQ_KEY_HERE";
+  ```
+- Or define `window.__GROQ_API_KEY__ = "gsk_..."` inside `index.html`.
+
+---
+
+## 4. Cloudflare Worker Production Proxy (Recommended for Real Clinic Deployments)
 1. Navigate to `/worker` directory.
 2. Run `wrangler secret put GROQ_API_KEY` and enter your Groq API Key.
 3. Deploy the worker: `wrangler deploy`.
@@ -54,7 +78,7 @@ Aria is a branded, embeddable AI concierge designed specifically for **Dazzle De
 
 ---
 
-## 4. Safety Guardrails (TRD §7 & §9)
+## 5. Safety Guardrails (TRD §7 & §9)
 - **Zero Diagnosis:** Strictly refuses medical and clinical advice; acute pain escalates to WhatsApp emergency care.
 - **Price Ranges Only:** Always quotes ranges ($4,500–$9,000 for veneers; $900–$1,600 for implants) followed by explicit clinical qualification requirements.
 - **Multilingual Delivery:** Responds fluently in Arabic, Russian, German, and Spanish.

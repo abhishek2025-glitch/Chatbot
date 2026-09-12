@@ -45,13 +45,20 @@ export default function App() {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // In-memory Groq settings (per TRD §6: kept in memory, never persisted or committed)
-  const [groqSettings, setGroqSettings] = useState<GroqSettings>({
-    apiKey: '',
-    model: 'openai/gpt-oss-120b',
-    workerUrl: '',
-    isDemoMode: true,
-    useFallbackEngine: true
+  // In-memory Groq settings (per TRD §6: kept in memory; auto-loaded from GitHub Secrets / Env if configured)
+  const [groqSettings, setGroqSettings] = useState<GroqSettings>(() => {
+    const envKey = ((import.meta as any).env?.VITE_GROQ_API_KEY as string) || '';
+    const windowKey = (typeof window !== 'undefined' && (window as any).__GROQ_API_KEY__) || '';
+    const envWorker = ((import.meta as any).env?.VITE_WORKER_URL as string) || '';
+    const windowWorker = (typeof window !== 'undefined' && (window as any).__WORKER_URL__) || '';
+
+    return {
+      apiKey: envKey || windowKey || '',
+      model: 'openai/gpt-oss-120b',
+      workerUrl: envWorker || windowWorker || '',
+      isDemoMode: true,
+      useFallbackEngine: true
+    };
   });
 
   // Initial welcome message from Aria (with mandatory AI disclosure per PRD §6)
