@@ -59,6 +59,43 @@ export async function generateChatReply(
       });
 
       if (!response.ok) {
+        // If model is unrecognized or unavailable, gracefully retry with standard llama-3.3-70b-versatile
+        if (response.status === 404 || response.status === 400) {
+          try {
+            const retryRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${effectiveKey}`
+              },
+              body: JSON.stringify({
+                model: 'llama-3.3-70b-versatile',
+                messages: formattedMessages,
+                temperature: 0.4,
+                max_completion_tokens: 600
+              })
+            });
+            if (retryRes.ok) {
+              const retryData = await retryRes.json();
+              const reply = retryData.choices?.[0]?.message?.content;
+              if (reply) {
+                const escalation = detectEscalation(reply, messages[messages.length - 1]?.content || '');
+                const leadUpdates = extractLeadFields(messages);
+                return {
+                  reply,
+                  isEscalation: escalation.isEscalated,
+                  escalationType: escalation.type,
+                  extractedLeadUpdates: leadUpdates,
+                  provider: 'groq',
+                  modelUsed: 'llama-3.3-70b-versatile'
+                };
+              }
+            }
+          } catch (retryErr) {
+            console.warn('Retry with llama-3.3-70b-versatile also failed:', retryErr);
+          }
+        }
+
         const errJson = await response.json().catch(() => ({}));
         throw new Error(errJson?.error?.message || `Groq API returned HTTP ${response.status}`);
       }

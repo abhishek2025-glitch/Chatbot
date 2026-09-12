@@ -39,7 +39,16 @@ import { generateChatReply } from './services/aiService';
 
 export default function App() {
   const [variant, setVariant] = useState<AppVariant>('dazzle_dental');
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('chat') === 'true' || params.get('chat') === 'open' || window.location.hash === '#chat') {
+        return true;
+      }
+      return window.innerWidth >= 768; // Open automatically on desktop/tablet
+    }
+    return true;
+  });
   const [isLeadDrawerOpen, setIsLeadDrawerOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
