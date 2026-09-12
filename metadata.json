@@ -1,0 +1,6 @@
+{
+  "name": "Aria — International Patient Concierge",
+  "description": "24/7 AI patient concierge and high-ticket qualification demo built for Dazzle Dental with live 3D showcase, Groq inference, and CRM lead capture.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
